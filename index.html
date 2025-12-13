@@ -21,6 +21,72 @@
         </ion-router>
     
         <ion-router-outlet></ion-router-outlet>
+        <!-- Плаваюча кнопка -->
+        <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+            <ion-fab-button id="add-planet-modal">
+                <ion-icon name="add"></ion-icon>
+            </ion-fab-button>
+        </ion-fab>
+        
+        <!-- Модальне вікно -->
+        <ion-modal trigger="add-planet-modal">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-buttons slot="start">
+                        <ion-button id="close-add-planet-modal">Закрити</ion-button>
+                    </ion-buttons>
+                    <ion-title>Додати нову планету</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button id="confirm-add-planet">Додати</ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+        
+            <ion-content class="ion-padding">
+                <ion-list>
+                    <ion-item>
+                        <ion-label position="stacked">Назва планети *</ion-label>
+                        <ion-input id="planetName" required></ion-input>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Зображення (URL) *</ion-label>
+                        <ion-input id="planetImage" required></ion-input>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Опис *</ion-label>
+                        <ion-textarea id="planetDescription" required></ion-textarea>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Температура</ion-label>
+                        <ion-input id="planetTemperature"></ion-input>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Маса</ion-label>
+                        <ion-input id="planetMass"></ion-input>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Атмосфера</ion-label>
+                        <ion-input id="planetAtmosphere"></ion-input>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Супутники (через кому)</ion-label>
+                        <ion-textarea id="planetSatellites"></ion-textarea>
+                    </ion-item>
+        
+                    <ion-item>
+                        <ion-label position="stacked">Місії (через кому)</ion-label>
+                        <ion-textarea id="planetMissions"></ion-textarea>
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+        </ion-modal>
+
     
         
         <ion-footer>
@@ -50,6 +116,8 @@
     <script nomodule src="https://cdn.jsdelivr.net/npm/ionicons/dist/ionicons/ionicons.js"></script>
 
     <script src="./app.js"></script>
+    <script type="module" src="./addPlanetModal.js"></script>
+
 </body>
 
 </html>

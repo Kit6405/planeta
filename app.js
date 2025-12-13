@@ -147,28 +147,58 @@ function currentRoutePath() {
 
 
 class HomePage extends HTMLElement {
+  constructor() {
+    super();
+    this.sortMode = 'az'; // запам’ятовуємо вибір
+  }
+
   connectedCallback() {
     this.render();
   }
 
+  getAllPlanets() {
+    const savedPlanets = JSON.parse(localStorage.getItem('planets')) || [];
+    return planets.concat(savedPlanets);
+  }
+
+  sortPlanets(list) {
+    const arr = [...list];
+
+    if (this.sortMode === 'az') {
+      arr.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (this.sortMode === 'za') {
+      arr.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (this.sortMode === 'mass') {
+      // маса може бути рядком — беремо перше число
+      const num = (v) => {
+        const m = String(v ?? '').match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : 0;
+      };
+      arr.sort((a, b) => num(b.details?.mass) - num(a.details?.mass));
+    }
+
+    return arr;
+  }
+
   render() {
-    const cards = planets
-        .map((p) => {
-            const href = `#/planet/${encodeURIComponent(p.name)}`;
+    const allPlanets = this.sortPlanets(this.getAllPlanets());
 
+    const cards = allPlanets
+      .map((p) => {
+        const href = `#/planet/${encodeURIComponent(p.name)}`;
         return `
-                <ion-col size="12" size-md="6" size-lg="4">
-             <a href="${href}" style="text-decoration:none;">
-                <ion-card>
+          <ion-col size="12" size-md="6" size-lg="4">
+            <a href="${href}" style="text-decoration:none;">
+              <ion-card>
                 <ion-img class="planet-img" src="${p.image}" alt="${p.name}"></ion-img>
-                <ion-card-header><ion-card-title>${p.name}</ion-card-title></ion-card-header>
+                <ion-card-header>
+                  <ion-card-title>${p.name}</ion-card-title>
+                </ion-card-header>
                 <ion-card-content class="muted">${p.description}</ion-card-content>
-             </ion-card>
+              </ion-card>
             </a>
-            </ion-col>
+          </ion-col>
         `;
-          
-
       })
       .join('');
 
@@ -181,23 +211,30 @@ class HomePage extends HTMLElement {
 
       <ion-content class="ion-padding">
         <div class="page-wrap">
-          <ion-text>
-            <h2>Головна сторінка</h2>
-          </ion-text>
-          <p class="muted">
-            Обери планету зі списку (мінімум 3). Список побудовано через ion-grid / ion-row / ion-col, а елементи — ion-card.
-          </p>
+          <p class="muted">Обери планету зі списку або додай власну.</p>
+
+          <ion-segment id="sortSegment" value="${this.sortMode}">
+            <ion-segment-button value="az">А → Я</ion-segment-button>
+            <ion-segment-button value="za">Я → А</ion-segment-button>
+            <ion-segment-button value="mass">За масою</ion-segment-button>
+          </ion-segment>
 
           <ion-grid>
-            <ion-row>
-              ${cards}
-            </ion-row>
+            <ion-row>${cards}</ion-row>
           </ion-grid>
         </div>
       </ion-content>
     `;
+
+    const segment = this.querySelector('#sortSegment');
+    segment?.addEventListener('ionChange', (e) => {
+      this.sortMode = e.detail.value; // запам’ятали
+      this.render();                 // перемалювали
+    });
   }
 }
+
+
 
 class PlanetPage extends HTMLElement {
   connectedCallback() {
@@ -207,109 +244,98 @@ class PlanetPage extends HTMLElement {
   }
 
   renderFromUrl() {
-    // Очікуємо /planet/:
+  // беремо шлях з hash, бо use-hash="true"
+  const path = (window.location.hash.slice(1) || '/');
+  const parts = path.split('/').filter(Boolean);
+  const idx = parts.findIndex((x) => x === 'planet');
+  const raw = idx >= 0 ? parts[idx + 1] : '';
+  const name = decodeURIComponent(raw || '');
 
-    const parts = currentRoutePath().split('/').filter(Boolean);
-    const idx = parts.findIndex((x) => x === 'planet');
-    const raw = idx >= 0 ? parts[idx + 1] : '';
-    const name = unslugifyUA(raw);
+  // важливо: шукаємо і в статичних, і в збережених
+  const savedPlanets = JSON.parse(localStorage.getItem('planets')) || [];
+  const allPlanets = planets.concat(savedPlanets);
 
-    const planet = getPlanetByName(name);
-    if (!planet) {
-      this.innerHTML = `<page-not-found></page-not-found>`;
-      return;
-    }
+  const planet = allPlanets.find(p => (p.name || '').toLowerCase() === name.toLowerCase());
 
-    const crumbs = `
-      <ion-breadcrumbs>
-        <ion-breadcrumb href="/" onclick="event.preventDefault(); document.querySelector('ion-router').push('/');">Головна</ion-breadcrumb>
-        <ion-breadcrumb>${planet.name}</ion-breadcrumb>
-      </ion-breadcrumbs>
-    `;
-
-    const d = planet.details;
-
-    const missions = Array.isArray(d.missions)
-      ? `<ion-list>
-          ${d.missions.map((m) => `<ion-item><ion-label>${m}</ion-label></ion-item>`).join('')}
-         </ion-list>`
-      : `<p>${d.missions}</p>`;
-
-    this.innerHTML = `
-      <ion-header>
-        <ion-toolbar>
-          <ion-buttons slot="start">
-            <ion-button fill="clear"
-              onclick="document.querySelector('ion-router').push('/');">
-              <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
-              Назад
-            </ion-button>
-          </ion-buttons>
-          <ion-title>${planet.name}</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
-      <ion-content class="ion-padding">
-        <div class="page-wrap">
-          ${crumbs}
-
-          <ion-card>
-            <ion-img src="${planet.image}" alt="${planet.name}"></ion-img>
-            <ion-card-header>
-              <ion-card-title>${planet.name}</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <p class="muted">${planet.description}</p>
-              <p>${planet.longText}</p>
-
-              <h3>Основні характеристики</h3>
-              <div class="chips">
-                <ion-chip><ion-label><b>Температура:</b> ${d.temperature}</ion-label></ion-chip>
-                <ion-chip><ion-label><b>Маса:</b> ${d.mass}</ion-label></ion-chip>
-                <ion-chip><ion-label><b>Відстань:</b> ${d.distance}</ion-label></ion-chip>
-                <ion-chip><ion-label><b>Відкриття:</b> ${d.discovery}</ion-label></ion-chip>
-              </div>
-
-              <h3 style="margin-top:14px;">Додаткова інформація</h3>
-              <ion-accordion-group>
-                <ion-accordion value="atmo">
-                  <ion-item slot="header">
-                    <ion-label>Хімічний склад атмосфери</ion-label>
-                  </ion-item>
-                  <div class="ion-padding" slot="content">
-                    <p>${d.atmosphere}</p>
-                  </div>
-                </ion-accordion>
-
-                <ion-accordion value="sats">
-                  <ion-item slot="header">
-                    <ion-label>Супутники</ion-label>
-                  </ion-item>
-                  <div class="ion-padding" slot="content">
-                    <p>${d.satellites}</p>
-                  </div>
-                </ion-accordion>
-
-                <ion-accordion value="missions">
-                  <ion-item slot="header">
-                    <ion-label>Експедиції та місії</ion-label>
-                  </ion-item>
-                  <div class="ion-padding" slot="content">
-                    ${missions}
-                  </div>
-                </ion-accordion>
-              </ion-accordion-group>
-            </ion-card-content>
-          </ion-card>
-        </div>
-      </ion-content>
-    `;
+  if (!planet) {
+    this.innerHTML = `<page-not-found></page-not-found>`;
+    return;
   }
+
+  const d = planet.details || {};
+
+  const satellitesText = Array.isArray(d.satellites) ? d.satellites.join(', ') : (d.satellites || '—');
+  const missionsList = Array.isArray(d.missions)
+    ? `<ion-list>${d.missions.map(m => `<ion-item><ion-label>${m}</ion-label></ion-item>`).join('')}</ion-list>`
+    : `<p>${d.missions || '—'}</p>`;
+
+  const longText = planet.longText || (planet.description + ' Докладні дані наведено нижче.');
+
+  this.innerHTML = `
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-button fill="clear" onclick="window.location.hash = '#/';">
+            <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
+            Назад
+          </ion-button>
+        </ion-buttons>
+        <ion-title>${planet.name}</ion-title>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <div class="page-wrap">
+        <ion-breadcrumbs>
+          <ion-breadcrumb href="#/">Головна</ion-breadcrumb>
+          <ion-breadcrumb>${planet.name}</ion-breadcrumb>
+        </ion-breadcrumbs>
+
+        <ion-card>
+          <ion-img src="${planet.image}" alt="${planet.name}"></ion-img>
+          <ion-card-header>
+            <ion-card-title>${planet.name}</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <p class="muted">${planet.description}</p>
+            <p>${longText}</p>
+
+            <h3>Основні характеристики</h3>
+            <div class="chips">
+              <ion-chip><ion-label><b>Температура:</b> ${d.temperature || '—'}</ion-label></ion-chip>
+              <ion-chip><ion-label><b>Маса:</b> ${d.mass || '—'}</ion-label></ion-chip>
+              <ion-chip><ion-label><b>Відстань:</b> ${d.distance || '—'}</ion-label></ion-chip>
+              <ion-chip><ion-label><b>Відкриття:</b> ${d.discovery || '—'}</ion-label></ion-chip>
+            </div>
+
+            <h3 style="margin-top:14px;">Додаткова інформація</h3>
+            <ion-accordion-group>
+              <ion-accordion value="atmo">
+                <ion-item slot="header"><ion-label>Хімічний склад атмосфери</ion-label></ion-item>
+                <div class="ion-padding" slot="content"><p>${d.atmosphere || '—'}</p></div>
+              </ion-accordion>
+
+              <ion-accordion value="sats">
+                <ion-item slot="header"><ion-label>Супутники</ion-label></ion-item>
+                <div class="ion-padding" slot="content"><p>${satellitesText}</p></div>
+              </ion-accordion>
+
+              <ion-accordion value="missions">
+                <ion-item slot="header"><ion-label>Експедиції та місії</ion-label></ion-item>
+                <div class="ion-padding" slot="content">${missionsList}</div>
+              </ion-accordion>
+            </ion-accordion-group>
+          </ion-card-content>
+        </ion-card>
+      </div>
+    </ion-content>
+  `;
+}
 }
 
 class NotFoundPage extends HTMLElement {
   connectedCallback() {
-    this.innerHTML = `
+    this.innerHTML = `“
       <ion-header>
         <ion-toolbar>
           <ion-title>Сторінку не знайдено</ion-title>
@@ -338,11 +364,28 @@ class AboutPage extends HTMLElement {
         <div class="page-wrap">
           <ion-card>
             <ion-card-header>
-              <ion-card-title>Лабораторна №2 — Ionic</ion-card-title>
+              <ion-card-title>Лабораторна — Ionic</ion-card-title>
             </ion-card-header>
             <ion-card-content class="muted">
-              <p>Демонстрація Ionic Core компонентів у статичній HTML сторінці.</p>
-              <p>Реалізовано: ion-grid/ion-card, роутинг, breadcrumbs, chips, accordion, tabs.</p>
+              <p>
+  Цей застосунок демонструє роботу з бібліотекою компонентів <b>Ionic Core</b> у статичній HTML-сторінці.
+</p>
+<p>
+  На головній сторінці відображається список планет у вигляді карток, реалізований через
+  <b>ion-grid / ion-row / ion-col</b> та <b>ion-card</b>.
+</p>
+<p>
+  Для кожної планети доступна детальна сторінка з навігацією та інтерактивними елементами:
+  <b>ion-breadcrumbs</b>, <b>ion-chip</b>, <b>ion-accordion</b>.
+</p>
+<p>
+  Додатково реалізовано інтерактивність: додавання нових планет через модальне вікно
+  (<b>ion-modal</b>), збереження даних у <b>localStorage</b> та сортування списку.
+</p>
+<p class="muted">
+  Проєкт виконано як один безперервний застосунок, де кожне наступне завдання розширює попередній функціонал.
+</p>
+
             </ion-card-content>
           </ion-card>
         </div>
