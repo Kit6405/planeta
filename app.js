@@ -123,7 +123,7 @@ missions: ['Voyager 2']
 ];
 
 function slugifyUA(name) {
-  // Для нашого набору вистачить encode/decode. Роут виглядає як /planet/Меркурій
+  
   return encodeURIComponent(name);
 }
 function unslugifyUA(slug) {
@@ -135,10 +135,16 @@ function getPlanetByName(name) {
 }
 
 function currentPathname() {
-  // Працює на Live Server: http://127.0.0.1:5500/...
-  // Для file:// буде гірше — тому і просимо Live Server.
+ 
   return window.location.pathname;
 }
+
+function currentRoutePath() {
+  // для use-hash="true": "#/planet/Марс" -> "/planet/Марс"
+  const h = window.location.hash || '#/';
+  return h.startsWith('#') ? h.slice(1) : h;
+}
+
 
 class HomePage extends HTMLElement {
   connectedCallback() {
@@ -148,21 +154,20 @@ class HomePage extends HTMLElement {
   render() {
     const cards = planets
         .map((p) => {
-          const href = `/planet/${slugifyUA(p.name)}`;
+            const href = `#/planet/${encodeURIComponent(p.name)}`;
 
-return `
-  <ion-col size="12" size-md="6" size-lg="4">
-    <ion-card button="true" onclick="document.querySelector('ion-router').push('${href}');">
-      <ion-img class="planet-img" src="${p.image}" alt="${p.name}"></ion-img>
-      <ion-card-header>
-        <ion-card-title>${p.name}</ion-card-title>
-      </ion-card-header>
-      <ion-card-content class="muted">
-        ${p.description}
-      </ion-card-content>
-    </ion-card>
-  </ion-col>
-`;
+        return `
+                <ion-col size="12" size-md="6" size-lg="4">
+             <a href="${href}" style="text-decoration:none;">
+                <ion-card>
+                <ion-img class="planet-img" src="${p.image}" alt="${p.name}"></ion-img>
+                <ion-card-header><ion-card-title>${p.name}</ion-card-title></ion-card-header>
+                <ion-card-content class="muted">${p.description}</ion-card-content>
+             </ion-card>
+            </a>
+            </ion-col>
+        `;
+          
 
       })
       .join('');
@@ -202,8 +207,9 @@ class PlanetPage extends HTMLElement {
   }
 
   renderFromUrl() {
-    // Очікуємо /planet/:name
-    const parts = currentPathname().split('/').filter(Boolean);
+    // Очікуємо /planet/:
+
+    const parts = currentRoutePath().split('/').filter(Boolean);
     const idx = parts.findIndex((x) => x === 'planet');
     const raw = idx >= 0 ? parts[idx + 1] : '';
     const name = unslugifyUA(raw);
@@ -354,8 +360,10 @@ customElements.define('page-about', AboutPage);
 
 // Легка підстраховка: якщо відкрили /planet/... напряму — попросимо роутер підтягнути компонент
 window.addEventListener('DOMContentLoaded', () => {
-  const router = document.querySelector('ion-router');
+  const router = document.querySelector('#router').push('/');
+
   if (router && typeof router.push === 'function') {
-    router.push(window.location.pathname || '/');
+    router.push(currentRoutePath() || '/');
+
   }
 });

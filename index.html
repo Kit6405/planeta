@@ -11,38 +11,43 @@
 </head>
 
 <body>
-    <ion-app><ion-router id="router" use-hash="false">
-        <ion-route url="/" component="page-home"></ion-route>
-        <ion-route url="/planet/:name" component="page-planet"></ion-route>
-        <ion-route url="/about" component="page-about"></ion-route>
-        <ion-route url="*" component="page-not-found"></ion-route>
-    </ion-router>
+    <ion-app>
+        <ion-router id="router" use-hash="true">
+            <ion-route url="/" component="page-home"></ion-route>
+            <ion-route url="/about" component="page-about"></ion-route>
+            <ion-route url="/planet/:name" component="page-planet"></ion-route>
+            <ion-route url="/index.html" component="page-home"></ion-route>
+            <ion-route url="*" component="page-not-found"></ion-route>
+        </ion-router>
     
-    <!-- Таби з нижньою панеллю -->
-    <ion-tabs>
         <ion-router-outlet></ion-router-outlet>
     
-        <ion-tab-bar slot="bottom">
-            <ion-tab-button tab="home" href="/">
-                <ion-icon name="planet-outline"></ion-icon>
-                <ion-label>Планети</ion-label>
-            </ion-tab-button>
+        
+        <ion-footer>
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button href="/" fill="clear">
+                        <ion-icon name="planet-outline" slot="start"></ion-icon>
+                        Планети
+                    </ion-button>
+                </ion-buttons>
     
-            <ion-tab-button tab="about" href="/about">
-                <ion-icon name="information-circle-outline"></ion-icon>
-                <ion-label>Про застосунок</ion-label>
-            </ion-tab-button>
-        </ion-tab-bar>
-    </ion-tabs>
+                <ion-buttons slot="end">
+                    <ion-button href="/about" fill="clear">
+                        <ion-icon name="information-circle-outline" slot="start"></ion-icon>
+                        Про застосунок
+                    </ion-button>
+                </ion-buttons>
+            </ion-toolbar>
+        </ion-footer>
     </ion-app>
 
-    <!-- Ionic Core -->
-    <script type="module" src="https://unpkg.com/@ionic/core/dist/ionic/ionic.esm.js"></script>
-    <script nomodule src="https://unpkg.com/@ionic/core/dist/ionic/ionic.js"></script>
 
-    <!-- Ionicons -->
-    <script type="module" src="https://unpkg.com/ionicons/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons/dist/ionicons/ionicons.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/ionicons/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/ionicons/dist/ionicons/ionicons.js"></script>
 
     <script src="./app.js"></script>
 </body>
