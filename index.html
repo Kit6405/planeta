@@ -1,19 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 1</title>
-    <!-- Insert script there -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
-    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <title>Планети Сонячної системи</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <link rel="stylesheet" href="https://unpkg.com/@ionic/core/css/ionic.bundle.css" />
+    <link rel="stylesheet" href="./style.css" />
 </head>
 
 <body>
-    <!-- You code here -->
-<ion-button>Click Me!</ion-button>
+    <ion-app><ion-router id="router" use-hash="false">
+        <ion-route url="/" component="page-home"></ion-route>
+        <ion-route url="/planet/:name" component="page-planet"></ion-route>
+        <ion-route url="/about" component="page-about"></ion-route>
+        <ion-route url="*" component="page-not-found"></ion-route>
+    </ion-router>
+    
+    <!-- Таби з нижньою панеллю -->
+    <ion-tabs>
+        <ion-router-outlet></ion-router-outlet>
+    
+        <ion-tab-bar slot="bottom">
+            <ion-tab-button tab="home" href="/">
+                <ion-icon name="planet-outline"></ion-icon>
+                <ion-label>Планети</ion-label>
+            </ion-tab-button>
+    
+            <ion-tab-button tab="about" href="/about">
+                <ion-icon name="information-circle-outline"></ion-icon>
+                <ion-label>Про застосунок</ion-label>
+            </ion-tab-button>
+        </ion-tab-bar>
+    </ion-tabs>
+    </ion-app>
+
+    <!-- Ionic Core -->
+    <script type="module" src="https://unpkg.com/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://unpkg.com/@ionic/core/dist/ionic/ionic.js"></script>
+
+    <!-- Ionicons -->
+    <script type="module" src="https://unpkg.com/ionicons/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons/dist/ionicons/ionicons.js"></script>
+
+    <script src="./app.js"></script>
 </body>
 
 </html>
