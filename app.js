@@ -149,187 +149,190 @@ function currentRoutePath() {
 class HomePage extends HTMLElement {
   constructor() {
     super();
-    this.sortMode = 'az'; // запам’ятовуємо вибір
+    this.planets = [];
+    this.sortMode = 'az';
   }
 
-  connectedCallback() {
-    this.render();
-  }
+  async fetchPlanetsData() {
+  const loader = document.querySelector('ion-loading');
+  await loader?.present();
 
-  getAllPlanets() {
-    const savedPlanets = JSON.parse(localStorage.getItem('planets')) || [];
-    return planets.concat(savedPlanets);
-  }
+  const API_URL = 'https://corsproxy.io/?https://university-api-alpha.vercel.app/api/planets';
 
-  sortPlanets(list) {
-    const arr = [...list];
+  try {
+    //  пробуємо API
+    const res = await fetch(API_URL);
 
-    if (this.sortMode === 'az') {
-      arr.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (this.sortMode === 'za') {
-      arr.sort((a, b) => b.name.localeCompare(a.name));
-    } else if (this.sortMode === 'mass') {
-      // маса може бути рядком — беремо перше число
-      const num = (v) => {
-        const m = String(v ?? '').match(/-?\d+(\.\d+)?/);
-        return m ? parseFloat(m[0]) : 0;
-      };
-      arr.sort((a, b) => num(b.details?.mass) - num(a.details?.mass));
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
     }
 
-    return arr;
+    const data = await res.json();
+
+    //  мапінг API → формат застосунку
+    this.planets = data.map((planet) => ({
+      name: planet.name,
+      image: planet.imgSrc?.img,
+      description: planet.description,
+      details: {
+        mass: planet.basicDetails?.mass,
+        volume: planet.basicDetails?.volume,
+        wikiLink: planet.wikiLink
+      }
+    }));
+
+    //  КЕШУЄМО 
+    localStorage.setItem('cachedPlanets', JSON.stringify(this.planets));
+
+  } catch (error) {
+    console.warn('API недоступне, використовуємо localStorage');
+
+    
+    this.planets = JSON.parse(localStorage.getItem('cachedPlanets')) || [];
+
+    if (this.planets.length === 0) {
+      alert('Не вдалося завантажити дані з сервера');
+    }
+  } finally {
+    await loader?.dismiss();
+  }
+}
+
+
+  async connectedCallback() {
+    await this.fetchPlanetsData();  // важливо
+    this.render();                 // рендеримо після
   }
 
   render() {
-    const allPlanets = this.sortPlanets(this.getAllPlanets());
-
-    const cards = allPlanets
-      .map((p) => {
-        const href = `#/planet/${encodeURIComponent(p.name)}`;
-        return `
-          <ion-col size="12" size-md="6" size-lg="4">
-            <a href="${href}" style="text-decoration:none;">
-              <ion-card>
-                <ion-img class="planet-img" src="${p.image}" alt="${p.name}"></ion-img>
-                <ion-card-header>
-                  <ion-card-title>${p.name}</ion-card-title>
-                </ion-card-header>
-                <ion-card-content class="muted">${p.description}</ion-card-content>
-              </ion-card>
-            </a>
-          </ion-col>
-        `;
-      })
-      .join('');
+    const savedPlanets = JSON.parse(localStorage.getItem('planets')) || [];
+    const allPlanets = this.planets.concat(savedPlanets);
 
     this.innerHTML = `
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>Планети Сонячної системи</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
+      <ion-header><ion-toolbar><ion-title>Планети</ion-title></ion-toolbar></ion-header>
       <ion-content class="ion-padding">
-        <div class="page-wrap">
-          <p class="muted">Обери планету зі списку або додай власну.</p>
-
-          <ion-segment id="sortSegment" value="${this.sortMode}">
-            <ion-segment-button value="az">А → Я</ion-segment-button>
-            <ion-segment-button value="za">Я → А</ion-segment-button>
-            <ion-segment-button value="mass">За масою</ion-segment-button>
-          </ion-segment>
-
-          <ion-grid>
-            <ion-row>${cards}</ion-row>
-          </ion-grid>
-        </div>
+        <ion-grid><ion-row>
+          ${allPlanets.map(p => `
+            <ion-col size="12" size-md="6" size-lg="4">
+              <a href="#/planet/${encodeURIComponent(p.name)}" style="text-decoration:none;">
+                <ion-card>
+                  <ion-img src="${p.image || ''}"></ion-img>
+                  <ion-card-header><ion-card-title>${p.name}</ion-card-title></ion-card-header>
+                  <ion-card-content><p>${p.description || ''}</p></ion-card-content>
+                </ion-card>
+              </a>
+            </ion-col>
+          `).join('')}
+        </ion-row></ion-grid>
       </ion-content>
     `;
-
-    const segment = this.querySelector('#sortSegment');
-    segment?.addEventListener('ionChange', (e) => {
-      this.sortMode = e.detail.value; // запам’ятали
-      this.render();                 // перемалювали
-    });
   }
 }
+
 
 
 
 class PlanetPage extends HTMLElement {
   connectedCallback() {
     this.renderFromUrl();
-    // Якщо користувач переходить назад/вперед — оновлюємо сторінку
-    window.addEventListener('popstate', () => this.renderFromUrl());
+    window.addEventListener('hashchange', () => this.renderFromUrl());
   }
 
-  renderFromUrl() {
-  // беремо шлях з hash, бо use-hash="true"
-  const path = (window.location.hash.slice(1) || '/');
-  const parts = path.split('/').filter(Boolean);
-  const idx = parts.findIndex((x) => x === 'planet');
-  const raw = idx >= 0 ? parts[idx + 1] : '';
-  const name = decodeURIComponent(raw || '');
+  async renderFromUrl() {
+  const loader = document.querySelector('ion-loading');
+  await loader?.present();
 
-  // важливо: шукаємо і в статичних, і в збережених
-  const savedPlanets = JSON.parse(localStorage.getItem('planets')) || [];
-  const allPlanets = planets.concat(savedPlanets);
+  try {
+    // "#/planet/Saturn" -> "Saturn"
+    const path = window.location.hash.slice(1) || '/';
+    const parts = path.split('/').filter(Boolean);
+    const raw = parts[1] || '';
+    const name = decodeURIComponent(raw);
 
-  const planet = allPlanets.find(p => (p.name || '').toLowerCase() === name.toLowerCase());
+    // ✅ ВАЖЛИВО: без "/" в кінці, і через proxy
+    const API_ONE = `https://corsproxy.io/?https://university-api-alpha.vercel.app/api/planets/${encodeURIComponent(name)}`;
 
-  if (!planet) {
-    this.innerHTML = `<page-not-found></page-not-found>`;
-    return;
-  }
+    let planet = null;
 
-  const d = planet.details || {};
+    try {
+      const res = await fetch(API_ONE);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      planet = await res.json();
+      // кешуємо деталі по назві
+      localStorage.setItem(`planet_${name}`, JSON.stringify(planet));
+    } catch (e) {
+      // fallback: з кешу
+      planet = JSON.parse(localStorage.getItem(`planet_${name}`) || 'null');
+    }
 
-  const satellitesText = Array.isArray(d.satellites) ? d.satellites.join(', ') : (d.satellites || '—');
-  const missionsList = Array.isArray(d.missions)
-    ? `<ion-list>${d.missions.map(m => `<ion-item><ion-label>${m}</ion-label></ion-item>`).join('')}</ion-list>`
-    : `<p>${d.missions || '—'}</p>`;
+    // якщо нема ні API, ні кешу — пробуємо знайти у списку (home кеш)
+    if (!planet) {
+      const cachedList = JSON.parse(localStorage.getItem('cachedPlanets') || '[]');
+      const fromList = cachedList.find(p => (p.name || '').toLowerCase() === name.toLowerCase());
+      if (fromList) {
+        planet = {
+          name: fromList.name,
+          description: fromList.description,
+          imgSrc: { img: fromList.image },
+          basicDetails: { mass: fromList.details?.mass, volume: fromList.details?.volume },
+          wikiLink: fromList.details?.wikiLink
+        };
+      }
+    }
 
-  const longText = planet.longText || (planet.description + ' Докладні дані наведено нижче.');
+    if (!planet) throw new Error('No data for planet');
 
-  this.innerHTML = `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-button fill="clear" onclick="window.location.hash = '#/';">
-            <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
-            Назад
-          </ion-button>
-        </ion-buttons>
-        <ion-title>${planet.name}</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    const img = planet.imgSrc?.img;
+    const desc = planet.description;
+    const mass = planet.basicDetails?.mass;
+    const volume = planet.basicDetails?.volume;
+    const wiki = planet.wikiLink;
 
-    <ion-content class="ion-padding">
-      <div class="page-wrap">
-        <ion-breadcrumbs>
-          <ion-breadcrumb href="#/">Головна</ion-breadcrumb>
-          <ion-breadcrumb>${planet.name}</ion-breadcrumb>
-        </ion-breadcrumbs>
+    this.innerHTML = `
+      <ion-header>
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button onclick="window.location.hash='#/';">
+              <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
+              Назад
+            </ion-button>
+          </ion-buttons>
+          <ion-title>${planet.name || name}</ion-title>
+        </ion-toolbar>
+      </ion-header>
 
+      <ion-content class="ion-padding">
         <ion-card>
-          <ion-img src="${planet.image}" alt="${planet.name}"></ion-img>
+          ${img ? `<ion-img src="${img}"></ion-img>` : ''}
           <ion-card-header>
-            <ion-card-title>${planet.name}</ion-card-title>
+            <ion-card-title>${planet.name || name}</ion-card-title>
           </ion-card-header>
-          <ion-card-content>
-            <p class="muted">${planet.description}</p>
-            <p>${longText}</p>
 
-            <h3>Основні характеристики</h3>
+          <ion-card-content>
+            ${desc ? `<p class="muted">${desc}</p>` : ''}
+
             <div class="chips">
-              <ion-chip><ion-label><b>Температура:</b> ${d.temperature || '—'}</ion-label></ion-chip>
-              <ion-chip><ion-label><b>Маса:</b> ${d.mass || '—'}</ion-label></ion-chip>
-              <ion-chip><ion-label><b>Відстань:</b> ${d.distance || '—'}</ion-label></ion-chip>
-              <ion-chip><ion-label><b>Відкриття:</b> ${d.discovery || '—'}</ion-label></ion-chip>
+              ${mass ? `<ion-chip><ion-label><b>Маса:</b> ${mass}</ion-label></ion-chip>` : ''}
+              ${volume ? `<ion-chip><ion-label><b>Обʼєм:</b> ${volume}</ion-label></ion-chip>` : ''}
             </div>
 
-            <h3 style="margin-top:14px;">Додаткова інформація</h3>
-            <ion-accordion-group>
-              <ion-accordion value="atmo">
-                <ion-item slot="header"><ion-label>Хімічний склад атмосфери</ion-label></ion-item>
-                <div class="ion-padding" slot="content"><p>${d.atmosphere || '—'}</p></div>
-              </ion-accordion>
-
-              <ion-accordion value="sats">
-                <ion-item slot="header"><ion-label>Супутники</ion-label></ion-item>
-                <div class="ion-padding" slot="content"><p>${satellitesText}</p></div>
-              </ion-accordion>
-
-              <ion-accordion value="missions">
-                <ion-item slot="header"><ion-label>Експедиції та місії</ion-label></ion-item>
-                <div class="ion-padding" slot="content">${missionsList}</div>
-              </ion-accordion>
-            </ion-accordion-group>
+            ${wiki ? `<p><a href="${wiki}" target="_blank">Джерело</a></p>` : ''}
           </ion-card-content>
         </ion-card>
-      </div>
-    </ion-content>
-  `;
+      </ion-content>
+    `;
+  } catch (error) {
+    console.error(error);
+    this.innerHTML = `
+      <ion-header><ion-toolbar><ion-title>Помилка</ion-title></ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <p>Не вдалося завантажити дані планети.</p>
+        <ion-button onclick="window.location.hash='#/';">На головну</ion-button>
+      </ion-content>
+    `;
+  } finally {
+    await loader?.dismiss();
+  }
 }
 }
 
