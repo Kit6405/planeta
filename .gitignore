@@ -1,0 +1,59 @@
+# ===============================
+# Node.js
+# ===============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===============================
+# Vite / build
+# ===============================
+.dist/
+dist/.vite/
+
+
+
+# ===============================
+# Capacitor
+# ===============================
+capacitor.config.ts
+capacitor.config.json.bak
+
+# ===============================
+# iOS (Xcode)
+# ===============================
+ios/App/build/
+ios/App/Pods/
+ios/App/DerivedData/
+ios/App/.DS_Store
+ios/App/*.xcworkspace/xcuserdata/
+ios/App/*.xcodeproj/xcuserdata/
+
+# ===============================
+# macOS
+# ===============================
+.DS_Store
+
+# ===============================
+# Environment files
+# ===============================
+.env
+.env.local
+.env.*.local
+
+# ===============================
+# Temporary / editor files
+# ===============================
+*.log
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# ===============================
+# Screenshots / exports
+# ===============================
+*.png
+*.jpg
+*.jpeg
